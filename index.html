@@ -396,3 +396,263 @@
   </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Line Distribution Studio - Step 3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background-color: #06080c; color: #fff; font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    
+    #bg-media { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; filter: blur(40px) brightness(0.2); z-index: -1; pointer-events: none; }
+
+    .app-layout { display: grid; grid-template-columns: 320px 1fr 380px; grid-template-rows: 1fr auto; gap: 16px; padding: 20px; height: 100vh; max-width: 1600px; margin: 0 auto; width: 100%; z-index: 10; }
+
+    /* ЛЕВАЯ ПАНЕЛЬ */
+    .left-sidebar { background: rgba(12, 14, 20, 0.85); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; backdrop-filter: blur(10px); overflow-y: auto; }
+    .sidebar-top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
+    .sidebar-title { font-family: 'Montserrat', sans-serif; font-size: 1.1rem; font-weight: 900; text-transform: uppercase; }
+    
+    .edit-members-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #ffb6c1; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+    .edit-members-btn:hover { background: rgba(255,182,193,0.2); }
+
+    .sidebar-sub { font-size: 0.62rem; color: #777; text-transform: uppercase; font-weight: 700; margin-bottom: 16px; letter-spacing: 0.5px; }
+    
+    .member-stat-card { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 16px; margin-bottom: 8px; background: rgba(255,255,255,0.02); border: 1px solid transparent; transition: all 0.3s ease; }
+    .member-stat-card.active { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.15); box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    
+    .stat-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: #000; flex-shrink: 0; border: 2px solid transparent; filter: grayscale(100%); transition: filter 0.3s ease, border-color 0.3s ease; }
+    .member-stat-card.active .stat-avatar { filter: grayscale(0%); }
+
+    .stat-info { flex: 1; display: flex; flex-direction: column; }
+    .stat-name { font-size: 0.85rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-bar-bg { width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin: 6px 0 3px 0; overflow: hidden; }
+    .stat-bar-fill { height: 100%; background: #fff; border-radius: 3px; width: 0%; transition: width 0.1s linear; }
+    .stat-numbers { display: flex; justify-content: space-between; font-size: 0.68rem; font-weight: 800; color: #888; }
+    .sidebar-footer { margin-top: auto; padding-top: 15px; font-size: 0.75rem; color: #666; font-weight: 700; font-family: monospace; }
+
+    /* ЦЕНТР: ЧАТ С ЛИРИКОЙ КАК НА СКРИНШОТЕ */
+    .center-panel { display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+    
+    .top-chat-header { background: rgba(12, 14, 20, 0.85); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(10px); }
+    .header-avatars-stack { display: flex; align-items: center; }
+    .header-avatars-stack img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 2px solid #0c0e14; margin-left: -8px; background: #000; filter: grayscale(100%); }
+    .header-avatars-stack img:first-child { margin-left: 0; }
+    .chat-song-info { display: flex; flex-direction: column; }
+    .chat-song-title { font-family: 'Montserrat', sans-serif; font-size: 0.9rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+    .chat-song-status { font-size: 0.62rem; color: #777; font-weight: 700; text-transform: uppercase; }
+
+    .lyrics-chat-container { flex: 1; background: rgba(12, 14, 20, 0.5); border: 1px solid rgba(255,255,255,0.04); border-radius: 20px; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; backdrop-filter: blur(8px); }
+    
+    .chat-row { display: flex; align-items: flex-end; gap: 10px; animation: fadeIn 0.3s ease; }
+    .row-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #000; flex-shrink: 0; filter: grayscale(100%); }
+    
+    .chat-bubble { max-width: 80%; background: rgba(50, 70, 120, 0.4); border: 1px solid rgba(100, 140, 220, 0.25); border-radius: 18px; padding: 12px 18px; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .chat-singer-label { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #8ab4f8; }
+    .chat-korean-text { font-size: 1.15rem; font-weight: 800; color: #fff; line-height: 1.25; }
+    .chat-trans-text { font-size: 0.78rem; font-weight: 600; color: #aaa; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ПРАВАЯ СТОРОНА (ЗАГЛУШКА ПОКА ЧТО) */
+    .right-panel { background: rgba(12, 14, 20, 0.85); border-radius: 20px; border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; color: #555; font-weight: 800; text-transform: uppercase; }
+
+    /* НИЖНЯЯ ПАНЕЛЬ */
+    .bottom-control-bar { grid-column: span 3; background: rgba(12, 14, 20, 0.9); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 14px 20px; display: flex; align-items: center; gap: 16px; backdrop-filter: blur(10px); }
+    button { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; font-weight: 800; cursor: pointer; }
+    button:hover { background: rgba(255,255,255,0.15); }
+    .btn-lime { background: #8ab4f8; color: #000; border-color: #8ab4f8; font-weight: 900; }
+  </style>
+</head>
+<body>
+
+  <video id="bg-media" loop muted playsinline src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"></video>
+
+  <div class="app-layout">
+    
+    <!-- ЛЕВАЯ ПАНЕЛЬ -->
+    <div class="left-sidebar">
+      <div class="sidebar-top-row">
+        <div>
+          <div class="sidebar-title">Line Distribution</div>
+          <div class="sidebar-sub">live vocal time - full bar = 25%</div>
+        </div>
+        <button class="edit-members-btn" onclick="alert('Окно настроек участниц')">⚙️</button>
+      </div>
+      <div id="sidebar-members-list"></div>
+      <div class="sidebar-footer" id="song-timer-footer">0:00 / 3:34</div>
+    </div>
+
+    <!-- ЦЕНТР: ЧАТ С ЛИРИКОЙ -->
+    <div class="center-panel">
+      <div class="top-chat-header">
+        <div class="header-avatars-stack" id="header-avatars"></div>
+        <div class="chat-song-info">
+          <div class="chat-song-title">DESERVE</div>
+          <div class="chat-song-status" id="chat-status">someone is typing...</div>
+        </div>
+      </div>
+
+      <div class="lyrics-chat-container" id="chat-container">
+        <!-- Сюда падают пузырьки лирики -->
+      </div>
+    </div>
+
+    <!-- ПРАВАЯ СТОРОНА -->
+    <div class="right-panel">
+      Правая зона (Плеер и Фото)
+    </div>
+
+    <!-- НИЗ -->
+    <div class="bottom-control-bar">
+      <button onclick="togglePlay()" class="btn-lime" id="play-btn">▶ PLAY</button>
+      <span id="global-timer" style="font-family:monospace; font-weight:900; color:#8ab4f8; font-size:1.1rem;">0:00.00</span>
+      <span style="color:#777; font-size:0.8rem; margin-left:auto;">Зажимайте клавиши 1-6 для записи пения</span>
+    </div>
+
+  </div>
+
+  <script>
+    let members = [
+      { id: 'm_0', name: 'RUKA', kor: '오랜만이야 잘 지낸 거니', trans: 'Oraenmaniya jal jinaen geoni', color: '#8ab4f8', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_1', name: 'PHARITA', kor: '여전히 눈이 부셔 넌', trans: 'Yeojeonhi nuni busyeo neon', color: '#f28b82', img: '', seconds: 0 },
+      { id: 'm_2', name: 'ASA', kor: '아마도 너는 잘 모를 거야', trans: 'Amado neoneun jal moreul geoya', color: '#fbbc04', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_3', name: 'AHYEON', kor: 'All of the memories, all of the moments', trans: 'All of the memories, all of the moments', color: '#ccff90', img: '', seconds: 0 },
+      { id: 'm_4', name: 'RORA', kor: '매일 꿈속에서 너를 만나', trans: 'Maeil kkumsogeseo neoreul manna', color: '#ff8bcb', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_5', name: 'CHIQUITA', kor: '영원히 함께할 거라고', trans: 'Yeongwonhi hamkkehal georago', color: '#c58af9', img: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80', seconds: 0 }
+    ];
+
+    let segments = [];
+    let currentTime = 0;
+    let isPlaying = false;
+    let timerInterval = null;
+    let activeSingerId = null;
+    let activeSegment = null;
+
+    function renderHeaderAvatars() {
+      const stack = document.getElementById('header-avatars');
+      stack.innerHTML = members.map(m => `<img src="${m.img}" alt="${m.name}">`).join('');
+    }
+
+    function renderLeftSidebar() {
+      const list = document.getElementById('sidebar-members-list');
+      list.innerHTML = '';
+      
+      let totalTime = members.reduce((acc, m) => acc + m.seconds, 0) || 1;
+
+      members.forEach(mem => {
+        const isAct = mem.id === activeSingerId;
+        const pct = (mem.seconds / totalTime) * 100;
+        const barWidth = Math.min(100, (pct / 25) * 100);
+
+        list.innerHTML += `
+          <div class="member-stat-card ${isAct ? 'active' : ''}" style="${isAct ? 'border-color:'+mem.color+';' : ''}">
+            <img class="stat-avatar" src="${mem.img}" style="border-color:${isAct ? mem.color : 'transparent'}; filter: grayscale(${isAct ? '0%' : '100%'});">
+            <div class="stat-info">
+              <div class="stat-name" style="color:${isAct ? mem.color : '#fff'}">${mem.name}</div>
+              <div class="stat-bar-bg">
+                <div class="stat-bar-fill" style="width:${barWidth}%; background:${mem.color};"></div>
+              </div>
+              <div class="stat-numbers">
+                <span>${mem.seconds.toFixed(1)}s</span>
+                <span style="color:${isAct ? mem.color : '#888'}">${pct.toFixed(1)}%</span>
+              </div>
+            </div>
+          </div>`;
+      });
+    }
+
+    function renderChat() {
+      const chatContainer = document.getElementById('chat-container');
+      chatContainer.innerHTML = '';
+      
+      // Показываем сегменты лирики, которые уже начались
+      const activeSegments = segments.filter(seg => currentTime >= seg.start);
+      const recentSegments = activeSegments.slice(-5); // последние 5 строк
+
+      recentSegments.forEach(seg => {
+        const singer = members.find(m => m.id === seg.singer);
+        if(!singer) return;
+        chatContainer.innerHTML += `
+          <div class="chat-row">
+            <img class="row-avatar" src="${singer.img}" style="filter: grayscale(${singer.id === activeSingerId ? '0%' : '100%'});">
+            <div class="chat-bubble" style="border-color:${singer.color}44; background:linear-gradient(135deg, ${singer.color}22, rgba(12,14,20,0.85))">
+              <div class="chat-singer-label" style="color:${singer.color}">${singer.name}</div>
+              <div class="chat-korean-text">${seg.kor}</div>
+              <div class="chat-trans-text">${seg.trans}</div>
+            </div>
+          </div>`;
+      });
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function startSinging(id) {
+      if(!isPlaying) togglePlay();
+      activeSingerId = id;
+      const singer = members.find(m => m.id === id);
+      activeSegment = { start: currentTime, end: currentTime, singer: id, kor: singer ? singer.kor : '', trans: singer ? singer.trans : '' };
+      segments.push(activeSegment);
+    }
+
+    function stopSinging() {
+      if(activeSegment) {
+        activeSegment.end = currentTime;
+        activeSegment = null;
+      }
+      activeSingerId = null;
+    }
+
+    window.addEventListener('keydown', e => {
+      if(e.repeat || document.activeElement.tagName === 'INPUT') return;
+      const num = parseInt(e.key);
+      if(num >= 1 && num <= members.length) startSinging(members[num-1].id);
+    });
+
+    window.addEventListener('keyup', e => {
+      if(document.activeElement.tagName === 'INPUT') return;
+      const num = parseInt(e.key);
+      if(num >= 1 && num <= members.length) stopSinging();
+    });
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById('play-btn').innerText = isPlaying ? '⏸ PAUSE' : '▶ PLAY';
+      if(isPlaying) {
+        timerInterval = setInterval(() => {
+          currentTime += 0.1;
+          if(activeSegment) activeSegment.end = currentTime;
+
+          let times = {};
+          members.forEach(m => times[m.id] = 0);
+          segments.forEach(seg => {
+            times[seg.singer] += (seg.end - seg.start);
+          });
+          members.forEach(m => m.seconds = times[m.id]);
+
+          const m = Math.floor(currentTime / 60);
+          const s = (currentTime % 60).toFixed(2);
+          document.getElementById('global-timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+          document.getElementById('song-timer-footer').innerText = `${m}:${s < 10 ? '0' : ''}${s} / 3:34`;
+
+          renderLeftSidebar();
+          renderChat();
+        }, 100);
+      } else {
+        clearInterval(timerInterval);
+        stopSinging();
+        renderLeftSidebar();
+        renderChat();
+      }
+    }
+
+    renderHeaderAvatars();
+    renderLeftSidebar();
+  </script>
+</body>
+</html>
