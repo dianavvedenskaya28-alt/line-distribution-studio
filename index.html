@@ -197,3 +197,202 @@
   </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Line Distribution Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background-color: #06080c; color: #fff; font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    
+    #bg-media { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; filter: blur(40px) brightness(0.2); z-index: -1; pointer-events: none; }
+
+    .app-layout { display: grid; grid-template-columns: 320px 1fr 380px; grid-template-rows: 1fr auto; gap: 16px; padding: 20px; height: 100vh; max-width: 1600px; margin: 0 auto; width: 100%; z-index: 10; }
+
+    /* ЛЕВАЯ ПАНЕЛЬ (Line Distribution) */
+    .left-sidebar { background: rgba(12, 14, 20, 0.85); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; backdrop-filter: blur(10px); overflow-y: auto; }
+    .sidebar-top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
+    .sidebar-title { font-family: 'Montserrat', sans-serif; font-size: 1.1rem; font-weight: 900; text-transform: uppercase; }
+    
+    .edit-members-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #ffb6c1; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+    .edit-members-btn:hover { background: rgba(255,182,193,0.2); }
+
+    .sidebar-sub { font-size: 0.62rem; color: #777; text-transform: uppercase; font-weight: 700; margin-bottom: 16px; letter-spacing: 0.5px; }
+    
+    .member-stat-card { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 16px; margin-bottom: 8px; background: rgba(255,255,255,0.02); border: 1px solid transparent; transition: all 0.3s ease; }
+    .member-stat-card.active { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.15); box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    
+    /* ЧЁРНЫЙ КВАДРАТ ЕСЛИ НЕТ ФОТО, ИЛИ Ч/Б ФОТО */
+    .stat-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: #000; flex-shrink: 0; border: 2px solid transparent; filter: grayscale(100%); transition: filter 0.3s ease, border-color 0.3s ease; }
+    .member-stat-card.active .stat-avatar { filter: grayscale(0%); }
+
+    .stat-info { flex: 1; display: flex; flex-direction: column; }
+    .stat-name { font-size: 0.85rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-bar-bg { width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin: 6px 0 3px 0; overflow: hidden; }
+    .stat-bar-fill { height: 100%; background: #fff; border-radius: 3px; width: 0%; transition: width 0.1s linear; }
+    .stat-numbers { display: flex; justify-content: space-between; font-size: 0.68rem; font-weight: 800; color: #888; }
+    
+    .sidebar-footer { margin-top: auto; padding-top: 15px; font-size: 0.75rem; color: #666; font-weight: 700; font-family: monospace; }
+
+    /* ЦЕНТР И ПРАВАЯ СТОРОНА (ЗАГЛУШКИ ПОКА ЧТО) */
+    .center-panel { background: rgba(12, 14, 20, 0.85); border-radius: 20px; border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; color: #555; font-weight: 800; text-transform: uppercase; }
+    .right-panel { background: rgba(12, 14, 20, 0.85); border-radius: 20px; border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; color: #555; font-weight: 800; text-transform: uppercase; }
+
+    /* НИЖНЯЯ ПАНЕЛЬ */
+    .bottom-control-bar { grid-column: span 3; background: rgba(12, 14, 20, 0.9); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 14px 20px; display: flex; align-items: center; gap: 16px; backdrop-filter: blur(10px); }
+    button { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; font-weight: 800; cursor: pointer; }
+    button:hover { background: rgba(255,255,255,0.15); }
+    .btn-lime { background: #ffb6c1; color: #000; border-color: #ffb6c1; font-weight: 900; }
+  </style>
+</head>
+<body>
+
+  <video id="bg-media" loop muted playsinline src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"></video>
+
+  <div class="app-layout">
+    
+    <!-- ЛЕВАЯ ПАНЕЛЬ -->
+    <div class="left-sidebar">
+      <div class="sidebar-top-row">
+        <div>
+          <div class="sidebar-title">Line Distribution</div>
+          <div class="sidebar-sub">live vocal time - full bar = 25%</div>
+        </div>
+        <button class="edit-members-btn" onclick="alert('Окно редактирования участниц подключим на следующем шаге!')">⚙️</button>
+      </div>
+      <div id="sidebar-members-list"></div>
+      <div class="sidebar-footer" id="song-timer-footer">0:00 / 3:34</div>
+    </div>
+
+    <!-- ЦЕНТР -->
+    <div class="center-panel">
+      Центральная зона (Чат лирики)
+    </div>
+
+    <!-- ПРАВАЯ СТОРОНА -->
+    <div class="right-panel">
+      Правая зона (Плеер и Фото)
+    </div>
+
+    <!-- НИЗ -->
+    <div class="bottom-control-bar">
+      <button onclick="togglePlay()" class="btn-lime" id="play-btn">▶ PLAY</button>
+      <span id="global-timer" style="font-family:monospace; font-weight:900; color:#ffb6c1; font-size:1.1rem;">0:00.00</span>
+      <span style="color:#777; font-size:0.8rem; margin-left:auto;">Зажимайте клавиши 1-6 для записи пения</span>
+    </div>
+
+  </div>
+
+  <script>
+    // Список участниц (у некоторых намеренно нет фото, будет чёрный квадрат)
+    let members = [
+      { id: 'm_0', name: 'RUKA', color: '#ffb6c1', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_1', name: 'PHARITA', color: '#ffbb00', img: '', seconds: 0 },
+      { id: 'm_2', name: 'ASA', color: '#00bbff', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_3', name: 'AHYEON', color: '#a3ff12', img: '', seconds: 0 },
+      { id: 'm_4', name: 'RORA', color: '#ffb6c1', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_5', name: 'CHIQUITA', color: '#ffbb00', img: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80', seconds: 0 }
+    ];
+
+    let segments = [];
+    let currentTime = 0;
+    let isPlaying = false;
+    let timerInterval = null;
+    let activeSingerId = null;
+    let activeSegment = null;
+
+    function renderLeftSidebar() {
+      const list = document.getElementById('sidebar-members-list');
+      list.innerHTML = '';
+      
+      let totalTime = members.reduce((acc, m) => acc + m.seconds, 0) || 1;
+
+      members.forEach(mem => {
+        const isAct = mem.id === activeSingerId;
+        const pct = (mem.seconds / totalTime) * 100;
+        const barWidth = Math.min(100, (pct / 25) * 100);
+
+        list.innerHTML += `
+          <div class="member-stat-card ${isAct ? 'active' : ''}" style="${isAct ? 'border-color:'+mem.color+';' : ''}">
+            <img class="stat-avatar" src="${mem.img}" style="border-color:${isAct ? mem.color : 'transparent'}; filter: grayscale(${isAct ? '0%' : '100%'});">
+            <div class="stat-info">
+              <div class="stat-name" style="color:${isAct ? mem.color : '#fff'}">${mem.name}</div>
+              <div class="stat-bar-bg">
+                <div class="stat-bar-fill" style="width:${barWidth}%; background:${mem.color};"></div>
+              </div>
+              <div class="stat-numbers">
+                <span>${mem.seconds.toFixed(1)}s</span>
+                <span style="color:${isAct ? mem.color : '#888'}">${pct.toFixed(1)}%</span>
+              </div>
+            </div>
+          </div>`;
+      });
+    }
+
+    function startSinging(id) {
+      if(!isPlaying) togglePlay();
+      activeSingerId = id;
+      activeSegment = { start: currentTime, end: currentTime, singer: id };
+      segments.push(activeSegment);
+    }
+
+    function stopSinging() {
+      if(activeSegment) {
+        activeSegment.end = currentTime;
+        activeSegment = null;
+      }
+      activeSingerId = null;
+    }
+
+    // Удержание клавиши для пения
+    window.addEventListener('keydown', e => {
+      if(e.repeat || document.activeElement.tagName === 'INPUT') return;
+      const num = parseInt(e.key);
+      if(num >= 1 && num <= members.length) startSinging(members[num-1].id);
+    });
+
+    window.addEventListener('keyup', e => {
+      if(document.activeElement.tagName === 'INPUT') return;
+      const num = parseInt(e.key);
+      if(num >= 1 && num <= members.length) stopSinging();
+    });
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById('play-btn').innerText = isPlaying ? '⏸ PAUSE' : '▶ PLAY';
+      if(isPlaying) {
+        timerInterval = setInterval(() => {
+          currentTime += 0.1;
+          if(activeSegment) activeSegment.end = currentTime;
+
+          let times = {};
+          members.forEach(m => times[m.id] = 0);
+          segments.forEach(seg => {
+            times[seg.singer] += (seg.end - seg.start);
+          });
+          members.forEach(m => m.seconds = times[m.id]);
+
+          const m = Math.floor(currentTime / 60);
+          const s = (currentTime % 60).toFixed(2);
+          document.getElementById('global-timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+          document.getElementById('song-timer-footer').innerText = `${m}:${s < 10 ? '0' : ''}${s} / 3:34`;
+
+          renderLeftSidebar();
+        }, 100);
+      } else {
+        clearInterval(timerInterval);
+        stopSinging();
+        renderLeftSidebar();
+      }
+    }
+
+    renderLeftSidebar();
+  </script>
+</body>
+</html>
