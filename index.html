@@ -11,3 +11,299 @@
   <div>Сайт полностью очищен. Готово к новому старту!</div>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Line Distribution Studio - Pro DAW</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background-color: #030406; color: #fff; font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    
+    /* ФОНОВОЕ ВИДЕО/КЛИП */
+    #bg-video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; filter: brightness(0.35); z-index: -1; pointer-events: none; }
+
+    .app-container { display: flex; flex-direction: column; height: 100vh; padding: 16px; justify-content: space-between; z-index: 10; max-width: 1700px; margin: 0 auto; width: 100%; }
+
+    /* ВЕРХНЯЯ ЧАСТЬ: ИМЯ ГРУППЫ И ДИАГРАММА */
+    .top-header-section { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .group-title-glow { font-family: 'Montserrat', sans-serif; font-size: 1.3rem; font-weight: 900; color: #a3ff12; letter-spacing: 2px; text-shadow: 0 0 15px rgba(163,255,18,0.5); text-transform: uppercase; }
+    
+    .pie-chart-box { width: 70px; height: 70px; border-radius: 50%; background: conic-gradient(#ff3355 0deg 120deg, #a3ff12 120deg 240deg, #ffbb00 240deg 360deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(0,0,0,0.8); border: 2px solid rgba(255,255,255,0.2); }
+    .pie-inner { width: 50px; height: 50px; background: #0c0e14; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: 900; color: #ffb6c1; text-align: center; }
+
+    /* СРЕДНЯЯ ЧАСТЬ: МНОГОДОРОЖЕЧНЫЙ ТАЙМЛАЙН (ДАВ) */
+    .daw-timeline-wrapper { background: rgba(8, 10, 15, 0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; height: 170px; display: flex; flex-direction: column; overflow: hidden; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+    .daw-top-bar { background: #11141d; padding: 6px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem; font-weight: 900; }
+    
+    .daw-scroll-area { flex: 1; overflow-x: auto; overflow-y: auto; position: relative; background: #05070a; }
+    .daw-track-row { display: flex; height: 20px; border-bottom: 1px solid rgba(255,255,255,0.03); position: relative; }
+    .daw-track-label { width: 85px; font-size: 0.6rem; font-weight: 800; color: #888; background: #0c0e14; display: flex; align-items: center; padding-left: 8px; border-right: 1px solid rgba(255,255,255,0.06); position: sticky; left: 0; z-index: 5; text-transform: uppercase; }
+    .daw-track-grid { width: 2500px; position: relative; background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 50px 100%; cursor: pointer; }
+    
+    .daw-block { position: absolute; top: 1px; bottom: 1px; border-radius: 3px; display: flex; align-items: center; padding: 0 6px; font-size: 0.58rem; font-weight: 900; color: #000; overflow: hidden; white-space: nowrap; border: 1px solid rgba(255,255,255,0.3); }
+    .daw-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #ff3355; z-index: 20; transform: translateX(-50%); pointer-events: none; }
+
+    /* НИЖНЯЯ ЧАСТЬ: ПЛАВАЮЩИЕ КАРТОЧКИ УЧАСТНИЦ С СОРТИРОВКОЙ */
+    .bottom-stats-container { display: flex; flex-direction: column; gap: 8px; max-width: 600px; width: 100%; }
+    .stat-row-card { display: flex; align-items: center; background: rgba(12, 14, 20, 0.75); border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; padding: 6px 16px 6px 6px; gap: 14px; backdrop-filter: blur(8px); transition: all 0.3s ease; }
+    .stat-row-card.active { border-color: rgba(255,255,255,0.4); box-shadow: 0 0 25px rgba(255,182,193,0.3); }
+    
+    .stat-row-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #000; filter: grayscale(100%); transition: filter 0.3s; }
+    .stat-row-card.active .stat-row-avatar { filter: grayscale(0%); }
+
+    .stat-row-name { font-size: 0.8rem; font-weight: 900; text-transform: uppercase; width: 90px; }
+    .stat-row-bar-wrap { flex: 1; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+    .stat-row-bar-fill { height: 100%; border-radius: 4px; width: 0%; transition: width 0.1s linear; }
+    .stat-row-seconds { font-family: monospace; font-size: 0.85rem; font-weight: 900; width: 45px; text-align: right; }
+
+    /* ПАНЕЛЬ КНОПОК В САМОМ НИЗУ */
+    .control-panel-bottom { display: flex; align-items: center; gap: 12px; background: rgba(12, 14, 20, 0.9); padding: 10px 18px; border-radius: 14px; backdrop-filter: blur(10px); }
+    button { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 7px 14px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+    button:hover { background: rgba(255,255,255,0.15); }
+    .btn-lime { background: #ffb6c1; color: #000; border-color: #ffb6c1; font-weight: 900; }
+  </style>
+</head>
+<body>
+
+  <!-- ФОНОВЫЙ ВИДЕОКЛИП (MP4) -->
+  <video id="bg-video" loop muted playsinline src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"></video>
+
+  <div class="app-container">
+    
+    <!-- ВЕРХ: НАЗВАНИЕ И ДИАГРАММА -->
+    <div class="top-header-section">
+      <div class="group-title-glow" id="group-title-label">BABYMONSTER</div>
+      <div class="pie-chart-box">
+        <div class="pie-inner">
+          <span style="font-size:0.5rem; color:#888;">TIME</span>
+          <span>100%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ЦЕНТР: МНОГОДОРОЖЕЧНЫЙ ТАЙМЛАЙН -->
+    <div class="daw-timeline-wrapper">
+      <div class="daw-top-bar">
+        <span style="font-family:monospace; color:#a3ff12;" id="timer-display">0:00.00</span>
+        <div>
+          <button style="padding:2px 8px; font-size:0.6rem;" onclick="alert('Таймлайн сохранен!')">SAVE TL</button>
+          <button style="padding:2px 8px; font-size:0.6rem; background:#ff3355; border-color:#ff3355;" onclick="clearTimeline()">CLEAR ALL</button>
+        </div>
+      </div>
+      <div class="daw-scroll-area" id="daw-scroll" onclick="seekDaw(event)">
+        <div class="daw-playhead" id="daw-playhead"></div>
+        <div id="daw-tracks-container"></div>
+      </div>
+    </div>
+
+    <!-- НИЗ: СТАТИСТИКА УЧАСТНИЦ И КНОПКИ -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
+      
+      <div class="bottom-stats-container" id="bottom-stats-list"></div>
+
+      <div class="control-panel-bottom">
+        <button onclick="togglePlay()" class="btn-lime" id="play-btn">▶ PLAY / RECORD</button>
+        <button onclick="resetApp()">⏹ RESET</button>
+        <input type="file" id="media-file-input" accept="video/mp4,audio/mp3,audio/*" style="display:none;" onchange="loadMedia(event)">
+        <button onclick="document.getElementById('media-file-input').click()">📁 Загрузить клип (MP4/MP3)</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // Участницы со скриншота
+    let members = [
+      { id: 'm_0', name: 'RUKA', color: '#ff3355', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_1', name: 'ASA', color: '#ffbb00', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_2', name: 'PHARITA', color: '#00bbff', img: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_3', name: 'AHYEON', color: '#a3ff12', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_4', name: 'RAMI', color: '#a000ff', img: '', seconds: 0 },
+      { id: 'm_5', name: 'RORA', color: '#ff8bcb', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_6', name: 'CHIQUITA', color: '#ffb6c1', img: '', seconds: 0 }
+    ];
+
+    let segments = [];
+    let currentTime = 0;
+    let mediaDuration = 180.0;
+    let isPlaying = false;
+    let timerInterval = null;
+    let activeSingerId = null;
+    let activeSegment = null;
+
+    let videoEl = document.getElementById('bg-video');
+
+    function startSinging(id) {
+      if(!isPlaying) togglePlay();
+      activeSingerId = id;
+      activeSegment = { start: currentTime, end: currentTime, singer: id };
+      segments.push(activeSegment);
+    }
+
+    function stopSinging() {
+      if(activeSegment) {
+        activeSegment.end = currentTime;
+        activeSegment = null;
+      }
+      activeSingerId = null;
+    }
+
+    // УДЕРЖАНИЕ КЛАВИШ (Hold to Sing)
+    window.addEventListener('keydown', e => {
+      if(e.repeat || document.activeElement.tagName === 'INPUT') return;
+      const num = parseInt(e.key);
+      if(num >= 1 && num <= members.length) startSinging(members[num-1].id);
+    });
+
+    window.addEventListener('keyup', e => {
+      if(document.activeElement.tagName === 'INPUT') return;
+      const num = parseInt(e.key);
+      if(num >= 1 && num <= members.length) stopSinging();
+    });
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById('play-btn').innerText = isPlaying ? '⏸ PAUSE' : '▶ PLAY / RECORD';
+      if(isPlaying) {
+        videoEl.play().catch(e => {});
+        timerInterval = setInterval(() => {
+          currentTime += 0.1;
+          if(currentTime >= mediaDuration) resetApp();
+          updateStudio();
+        }, 100);
+      } else {
+        videoEl.pause();
+        clearInterval(timerInterval);
+        stopSinging();
+      }
+    }
+
+    function resetApp() {
+      isPlaying = false;
+      document.getElementById('play-btn').innerText = '▶ PLAY / RECORD';
+      videoEl.pause();
+      videoEl.currentTime = 0;
+      currentTime = 0;
+      clearInterval(timerInterval);
+      stopSinging();
+      updateStudio();
+    }
+
+    function clearTimeline() {
+      segments = [];
+      updateStudio();
+    }
+
+    function seekDaw(e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pos = Math.max(0, Math.min(1, (e.clientX - rect.left + document.getElementById('daw-scroll').scrollLeft) / 2500));
+      currentTime = pos * mediaDuration;
+      videoEl.currentTime = Math.min(currentTime, videoEl.duration || mediaDuration);
+      updateStudio();
+    }
+
+    function updateStudio() {
+      if(videoEl && videoEl.duration && !isNaN(videoEl.duration)) {
+        mediaDuration = videoEl.duration;
+      }
+
+      if(activeSegment) {
+        activeSegment.end = currentTime;
+      }
+
+      // Таймер
+      const m = Math.floor(currentTime / 60);
+      const s = (currentTime % 60).toFixed(2);
+      document.getElementById('timer-display').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+
+      // Считаем время
+      let times = {};
+      members.forEach(m => times[m.id] = 0);
+      let totalSinging = 0;
+
+      segments.forEach(seg => {
+        const dur = Math.max(0, (currentTime >= seg.end ? seg.end : Math.max(seg.start, currentTime)) - seg.start);
+        times[seg.singer] += dur;
+        totalSinging += dur;
+      });
+
+      members.forEach(m => m.seconds = times[m.id]);
+      // Сортировка по убыванию секунд
+      members.sort((a, b) => b.seconds - a.seconds);
+
+      let currentSeg = segments.find(seg => currentTime >= seg.start && currentTime <= seg.end);
+      let activeId = activeSingerId || (currentSeg ? currentSeg.singer : null);
+      let activeSinger = members.find(m => m.id === activeId);
+
+      // Рендер нижних карточек статистики
+      const statsList = document.getElementById('bottom-stats-list');
+      statsList.innerHTML = '';
+      members.forEach(mem => {
+        const isAct = mem.id === activeId;
+        const barWidth = Math.min(100, (mem.seconds / (mediaDuration || 180)) * 100 * 3);
+
+        statsList.innerHTML += `
+          <div class="stat-row-card ${isAct ? 'active' : ''}">
+            <img class="stat-row-avatar" src="${mem.img}" style="border-color:${isAct ? mem.color : 'transparent'};">
+            <div class="stat-row-name" style="color:${isAct ? mem.color : '#fff'}">${mem.name}</div>
+            <div class="stat-row-bar-wrap">
+              <div class="stat-row-bar-fill" style="width:${barWidth}%; background:${mem.color};"></div>
+            </div>
+            <div class="stat-row-seconds" style="color:${isAct ? mem.color : '#888'}">${mem.seconds.toFixed(1)}</div>
+          </div>`;
+      });
+
+      // Рендер DAW-треков таймлайна
+      const tracksContainer = document.getElementById('daw-tracks-container');
+      tracksContainer.innerHTML = '';
+
+      members.forEach(mem => {
+        const row = document.createElement('div');
+        row.className = 'daw-track-row';
+
+        const label = document.createElement('div');
+        label.className = 'daw-track-label';
+        label.style.color = mem.color;
+        label.innerText = mem.name;
+        row.appendChild(label);
+
+        const grid = document.createElement('div');
+        grid.className = 'daw-track-grid';
+
+        segments.forEach(seg => {
+          if(seg.singer === mem.id) {
+            const block = document.createElement('div');
+            block.className = 'daw-block';
+            block.style.left = `${(seg.start / mediaDuration) * 2500}px`;
+            block.style.width = `${(Math.max(0.5, seg.end - seg.start) / mediaDuration) * 2500}px`;
+            block.style.background = mem.color;
+            block.innerText = mem.name;
+            grid.appendChild(block);
+          }
+        });
+
+        row.appendChild(grid);
+        tracksContainer.appendChild(row);
+      });
+
+      document.getElementById('daw-playhead').style.left = `${(currentTime / mediaDuration) * 2500}px`;
+    }
+
+    function loadMedia(e) {
+      const file = e.target.files[0];
+      if(!file) return;
+      const url = URL.createObjectURL(file);
+      videoEl.src = url;
+    }
+
+    updateStudio();
+  </script>
+</body>
+</html>
