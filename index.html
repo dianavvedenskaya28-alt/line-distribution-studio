@@ -307,3 +307,368 @@
   </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Line Distribution Studio - DAW Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background-color: #030406; color: #fff; font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    
+    #bg-video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; filter: brightness(0.35); z-index: -1; pointer-events: none; }
+
+    .app-container { display: flex; flex-direction: column; height: 100vh; padding: 16px; justify-content: space-between; z-index: 10; max-width: 1700px; margin: 0 auto; width: 100%; }
+
+    /* ВЕРХНЯЯ ЧАСТЬ: ИМЯ ГРУППЫ И КНОПКА EDIT MEMBERS */
+    .top-header-section { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+    .group-title-glow { font-family: 'Montserrat', sans-serif; font-size: 1.2rem; font-weight: 900; color: #a3ff12; letter-spacing: 2px; text-transform: uppercase; }
+    
+    .edit-members-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+    .edit-members-btn:hover { background: rgba(255,255,255,0.2); }
+
+    /* МНОГОДОРОЖЕЧНЫЙ ТАЙМЛАЙН (ДАВ) */
+    .daw-timeline-wrapper { background: rgba(8, 10, 15, 0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; height: 160px; display: flex; flex-direction: column; overflow: hidden; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+    .daw-top-bar { background: #11141d; padding: 6px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem; font-weight: 900; }
+    
+    .daw-scroll-area { flex: 1; overflow-x: auto; overflow-y: auto; position: relative; background: #05070a; }
+    .daw-track-row { display: flex; height: 20px; border-bottom: 1px solid rgba(255,255,255,0.03); position: relative; }
+    .daw-track-label { width: 85px; font-size: 0.6rem; font-weight: 800; color: #888; background: #0c0e14; display: flex; align-items: center; padding-left: 8px; border-right: 1px solid rgba(255,255,255,0.06); position: sticky; left: 0; z-index: 5; text-transform: uppercase; }
+    .daw-track-grid { width: 2500px; position: relative; background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 50px 100%; cursor: pointer; }
+    
+    .daw-block { position: absolute; top: 1px; bottom: 1px; border-radius: 3px; display: flex; align-items: center; padding: 0 6px; font-size: 0.58rem; font-weight: 900; color: #000; overflow: hidden; white-space: nowrap; border: 1px solid rgba(255,255,255,0.3); }
+    .daw-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #ff3355; z-index: 20; transform: translateX(-50%); pointer-events: none; }
+
+    /* СТИЛЬ КАРТОЧЕК УЧАСТНИЦ КАК НА СКРИНШОТЕ */
+    .bottom-stats-container { display: flex; flex-direction: column; gap: 6px; max-width: 340px; width: 100%; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+    
+    .member-style-card { display: flex; align-items: center; justify-content: space-between; background: rgba(18, 20, 28, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 8px 14px; backdrop-filter: blur(8px); transition: all 0.3s ease; }
+    .member-style-card.active { border-color: rgba(255,255,255,0.4); box-shadow: 0 0 20px rgba(255,182,193,0.25); }
+
+    .member-style-left { display: flex; align-items: center; gap: 12px; }
+    .member-style-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #000; filter: grayscale(100%); transition: filter 0.3s; }
+    .member-style-card.active .member-style-avatar { filter: grayscale(0%); }
+
+    .member-style-info { display: flex; flex-direction: column; }
+    .member-style-name { font-family: 'Montserrat', sans-serif; font-size: 0.85rem; font-weight: 900; text-transform: uppercase; color: #fff; }
+    .member-style-sub { font-size: 0.6rem; font-weight: 700; color: #777; text-transform: uppercase; }
+
+    /* ПРАВАЯ КАПСУЛА СЕКУНД КАК НА СКРИНШОТЕ */
+    .member-style-badge { background: #12151f; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 6px 12px; font-family: monospace; font-size: 0.85rem; font-weight: 900; color: #aaa; min-width: 55px; text-align: center; }
+    .member-style-card.active .member-style-badge { color: #fff; background: rgba(255,255,255,0.1); }
+
+    /* НИЖНЯЯ ПАНЕЛЬ КНОПОК */
+    .control-panel-bottom { display: flex; align-items: center; gap: 12px; background: rgba(12, 14, 20, 0.9); padding: 10px 18px; border-radius: 14px; backdrop-filter: blur(10px); }
+    button { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 7px 14px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+    button:hover { background: rgba(255,255,255,0.15); }
+    .btn-lime { background: #ffb6c1; color: #000; border-color: #ffb6c1; font-weight: 900; }
+
+    /* МОДАЛЬНОЕ ОКНО EDIT MEMBERS */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(3,4,6,0.95); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(10px); }
+    .setup-card { background: #0c0e14; border: 1px solid #202330; border-radius: 20px; width: 90%; max-width: 550px; height: 85vh; display: flex; flex-direction: column; padding: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.8); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-shrink: 0; }
+    .modal-action-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer; }
+    .btn-check { color: #a3ff12; border-color: rgba(163,255,18,0.4); }
+    .btn-close { color: #ff3355; border-color: rgba(255,51,85,0.4); }
+    .setup-scroll-area { flex: 1; overflow-y: auto; padding-right: 4px; }
+    .form-group { margin-bottom: 12px; text-align: left; }
+    .form-group label { display: block; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #888; margin-bottom: 4px; }
+    .form-group input { width: 100%; background: #12151f; border: 1px solid #252838; color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; outline: none; }
+    .member-config-card { background: #12151f; border: 1px solid #202330; border-radius: 12px; padding: 12px; margin-bottom: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .member-config-card h4 { grid-column: span 2; color: #ffb6c1; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+
+  <video id="bg-video" loop muted playsinline src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"></video>
+
+  <!-- МОДАЛЬНОЕ ОКНО EDIT MEMBERS С ГАЛОЧКОЙ И КРЕСТИКОМ -->
+  <div class="modal-overlay" id="setup-modal">
+    <div class="setup-card">
+      <div class="modal-header">
+        <button class="modal-action-btn btn-check" onclick="saveMembersConfig()" title="Сохранить">✔</button>
+        <div style="font-family:'Montserrat'; font-weight:900; font-size:1.1rem; color:#ffb6c1;">EDIT MEMBERS</div>
+        <button class="modal-action-btn btn-close" onclick="closeModal()" title="Закрыть без изменений">✕</button>
+      </div>
+      <div class="setup-scroll-area">
+        <div class="form-group"><label>Группа</label><input type="text" id="setup-group" value="BABYMONSTER"></div>
+        <div class="form-group"><label>Количество участниц</label><input type="number" id="setup-count" value="6" min="1" max="15" oninput="generateInputs()"></div>
+        <div id="members-inputs-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- ВЕРХ: НАЗВАНИЕ И КНОПКА EDIT MEMBERS -->
+    <div class="top-header-section">
+      <div class="group-title-glow" id="group-title-label">BABYMONSTER</div>
+      <button class="edit-members-btn" onclick="openModal()">⚙️ Edit Members</button>
+    </div>
+
+    <!-- ЦЕНТР: МНОГОДОРОЖЕЧНЫЙ ТАЙМЛАЙН -->
+    <div class="daw-timeline-wrapper">
+      <div class="daw-top-bar">
+        <span style="font-family:monospace; color:#a3ff12;" id="timer-display">0:00.00</span>
+        <div>
+          <button style="padding:2px 8px; font-size:0.6rem;" onclick="alert('Таймлайн сохранен!')">SAVE TL</button>
+          <button style="padding:2px 8px; font-size:0.6rem; background:#ff3355; border-color:#ff3355;" onclick="clearTimeline()">CLEAR ALL</button>
+        </div>
+      </div>
+      <div class="daw-scroll-area" id="daw-scroll" onclick="seekDaw(event)">
+        <div class="daw-playhead" id="daw-playhead"></div>
+        <div id="daw-tracks-container"></div>
+      </div>
+    </div>
+
+    <!-- НИЗ: СТИЛЬНЫЕ КАРТОЧКИ УЧАСТНИЦ И КНОПКИ -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
+      
+      <div class="bottom-stats-container" id="bottom-stats-list"></div>
+
+      <div class="control-panel-bottom">
+        <button onclick="togglePlay()" class="btn-lime" id="play-btn">▶ PLAY / RECORD</button>
+        <button onclick="resetApp()">⏹ RESET</button>
+        <input type="file" id="media-file-input" accept="video/mp4,audio/mp3,audio/*" style="display:none;" onchange="loadMedia(event)">
+        <button onclick="document.getElementById('media-file-input').click()">📁 Загрузить клип</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    const defaultColors = ['#ff3355', '#ffbb00', '#00bbff', '#a3ff12', '#a000ff', '#ff8bcb'];
+
+    let members = [
+      { id: 'm_0', name: 'RUKA', color: '#ff3355', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_1', name: 'PHARITA', color: '#ffbb00', img: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_2', name: 'ASA', color: '#00bbff', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_3', name: 'AHYEON', color: '#a3ff12', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_4', name: 'RORA', color: '#a000ff', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80', seconds: 0 },
+      { id: 'm_5', name: 'CHIQUITA', color: '#ffb6c1', img: '', seconds: 0 }
+    ];
+
+    let segments = [];
+    let currentTime = 0;
+    let mediaDuration = 180.0;
+    let isPlaying = false;
+    let timerInterval = null;
+    let activeSingerId = null;
+    let activeSegment = null;
+
+    let videoEl = document.getElementById('bg-video');
+
+    function openModal() {
+      generateInputs();
+      document.getElementById('setup-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('setup-modal').style.display = 'none';
+    }
+
+    function generateInputs() {
+      const count = parseInt(document.getElementById('setup-count').value) || 1;
+      const list = document.getElementById('members-inputs-list');
+      list.innerHTML = '';
+      for(let i=0; i<count; i++) {
+        let name = members[i] ? members[i].name : `MEMBER ${i+1}`;
+        let color = members[i] ? members[i].color : defaultColors[i % defaultColors.length];
+        list.innerHTML += `
+          <div class="member-config-card">
+            <h4>Участница ${i+1}</h4>
+            <div class="form-group"><label>Имя</label><input type="text" id="m-name-${i}" value="${name}"></div>
+            <div class="form-group"><label>Цвет</label><input type="color" id="m-color-${i}" value="${color}" style="height:34px; padding:2px; width:100%;"></div>
+            <div class="form-group" style="grid-column: span 2;"><label>Фото аватарки</label><input type="file" id="m-file-${i}" accept="image/*" style="font-size:0.75rem;"></div>
+          </div>`;
+      }
+    }
+
+    function saveMembersConfig() {
+      const count = parseInt(document.getElementById('setup-count').value) || 1;
+      const group = document.getElementById('setup-group').value;
+      document.getElementById('group-title-label').innerText = group;
+
+      let newMembers = [];
+      for(let i=0; i<count; i++) {
+        const fileIn = document.getElementById(`m-file-${i}`);
+        let img = (members[i] && members[i].img) ? members[i].img : '';
+        if(fileIn && fileIn.files && fileIn.files[0]) {
+          img = URL.createObjectURL(fileIn.files[0]);
+        }
+        newMembers.push({
+          id: `m_${i}`,
+          name: document.getElementById(`m-name-${i}`).value,
+          color: document.getElementById(`m-color-${i}`).value,
+          img: img,
+          seconds: 0
+        });
+      }
+      members = newMembers;
+      closeModal();
+      updateStudio();
+    }
+
+    function startSinging(id) {
+      if(!isPlaying) togglePlay();
+      activeSingerId = id;
+      activeSegment = { start: currentTime, end: currentTime, singer: id };
+      segments.push(activeSegment);
+    }
+
+    function stopSinging() {
+      if(activeSegment) {
+        activeSegment.end = currentTime;
+        activeSegment = null;
+      }
+      activeSingerId = null;
+    }
+
+    window.addEventListener('keydown', e => {
+      if(e.repeat || document.activeElement.tagName === 'INPUT') return;
+      const num = parseInt(e.key);
+      if(num >= 1 && num <= members.length) startSinging(members[num-1].id);
+    });
+
+    window.addEventListener('keyup', e => {
+      if(document.activeElement.tagName === 'INPUT') return;
+      const num = parseInt(e.key);
+      if(num >= 1 && num <= members.length) stopSinging();
+    });
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById('play-btn').innerText = isPlaying ? '⏸ PAUSE' : '▶ PLAY / RECORD';
+      if(isPlaying) {
+        videoEl.play().catch(e => {});
+        timerInterval = setInterval(() => {
+          currentTime += 0.1;
+          if(currentTime >= mediaDuration) resetApp();
+          updateStudio();
+        }, 100);
+      } else {
+        videoEl.pause();
+        clearInterval(timerInterval);
+        stopSinging();
+      }
+    }
+
+    function resetApp() {
+      isPlaying = false;
+      document.getElementById('play-btn').innerText = '▶ PLAY / RECORD';
+      videoEl.pause();
+      videoEl.currentTime = 0;
+      currentTime = 0;
+      clearInterval(timerInterval);
+      stopSinging();
+      updateStudio();
+    }
+
+    function clearTimeline() {
+      segments = [];
+      updateStudio();
+    }
+
+    function seekDaw(e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pos = Math.max(0, Math.min(1, (e.clientX - rect.left + document.getElementById('daw-scroll').scrollLeft) / 2500));
+      currentTime = pos * mediaDuration;
+      videoEl.currentTime = Math.min(currentTime, videoEl.duration || mediaDuration);
+      updateStudio();
+    }
+
+    function updateStudio() {
+      if(videoEl && videoEl.duration && !isNaN(videoEl.duration)) {
+        mediaDuration = videoEl.duration;
+      }
+
+      if(activeSegment) {
+        activeSegment.end = currentTime;
+      }
+
+      const m = Math.floor(currentTime / 60);
+      const s = (currentTime % 60).toFixed(2);
+      document.getElementById('timer-display').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+
+      let times = {};
+      members.forEach(m => times[m.id] = 0);
+      segments.forEach(seg => {
+        times[seg.singer] += Math.max(0, (currentTime >= seg.end ? seg.end : Math.max(seg.start, currentTime)) - seg.start);
+      });
+
+      members.forEach(m => m.seconds = times[m.id]);
+      members.sort((a, b) => b.seconds - a.seconds); // Автосортировка по секундам
+
+      let currentSeg = segments.find(seg => currentTime >= seg.start && currentTime <= seg.end);
+      let activeId = activeSingerId || (currentSeg ? currentSeg.singer : null);
+
+      // Рендер стильных карточек участниц как на вашем скриншоте
+      const statsList = document.getElementById('bottom-stats-list');
+      statsList.innerHTML = '';
+      members.forEach(mem => {
+        const isAct = mem.id === activeId;
+        statsList.innerHTML += `
+          <div class="member-style-card ${isAct ? 'active' : ''}" style="${isAct ? 'border-color:'+mem.color+';' : ''}">
+            <div class="member-style-left">
+              <img class="member-style-avatar" src="${mem.img}" style="border-color:${isAct ? mem.color : 'transparent'};">
+              <div class="member-style-info">
+                <div class="member-style-name" style="color:${isAct ? mem.color : '#fff'}">${mem.name}</div>
+                <div class="member-style-sub">member</div>
+              </div>
+            </div>
+            <div class="member-style-badge" style="${isAct ? 'color:'+mem.color+'; border-color:'+mem.color : ''}">${mem.seconds.toFixed(1)}</div>
+          </div>`;
+      });
+
+      // Рендер DAW-треков
+      const tracksContainer = document.getElementById('daw-tracks-container');
+      tracksContainer.innerHTML = '';
+
+      members.forEach(mem => {
+        const row = document.createElement('div');
+        row.className = 'daw-track-row';
+
+        const label = document.createElement('div');
+        label.className = 'daw-track-label';
+        label.style.color = mem.color;
+        label.innerText = mem.name;
+        row.appendChild(label);
+
+        const grid = document.createElement('div');
+        grid.className = 'daw-track-grid';
+
+        segments.forEach(seg => {
+          if(seg.singer === mem.id) {
+            const block = document.createElement('div');
+            block.className = 'daw-block';
+            block.style.left = `${(seg.start / mediaDuration) * 2500}px`;
+            block.style.width = `${(Math.max(0.5, seg.end - seg.start) / mediaDuration) * 2500}px`;
+            block.style.background = mem.color;
+            block.innerText = mem.name;
+            grid.appendChild(block);
+          }
+        });
+
+        row.appendChild(grid);
+        tracksContainer.appendChild(row);
+      });
+
+      document.getElementById('daw-playhead').style.left = `${(currentTime / mediaDuration) * 2500}px`;
+    }
+
+    function loadMedia(e) {
+      const file = e.target.files[0];
+      if(!file) return;
+      videoEl.src = URL.createObjectURL(file);
+    }
+
+    updateStudio();
+  </script>
+</body>
+</html>
